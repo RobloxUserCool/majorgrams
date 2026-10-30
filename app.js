@@ -1,102 +1,63 @@
 const $ = (id) => document.getElementById(id);
+const titles = {
+  chats: "Чаты", chat: "Общий чат", contacts: "Контакты",
+  settings: "Настройки", profile: "Профиль",
+};
+let current = "chats";
 let timer = null;
 
-function token() {
-  try { return localStorage.getItem("mg_token"); } catch (e) { return null; }
+function store(k, v) {
+  try {
+    if (v === null) localStorage.removeItem(k);
+    else if (v !== undefined) localStorage.setItem(k, v);
+    else return localStorage.getItem(k) || "";
+  } catch (e) {}
+  return "";
+}
+const token = () => store("mg_token");
+const myName = () => store("mg_user");
+
+function show(p) {
+  current = p;
+  document.querySelectorAll(".page").forEach((el) => {
+    el.classList.remove("on");
+    el.style.display = "";
+  });
+  const pg = $("pg-" + p);
+  pg.classList.add("on");
+  if (p === "chat") {
+    pg.style.display = "flex";
+    pg.style.flexDirection = "column";
+  }
+  $("title").textContent = titles[p];
+  $("back").style.display = p === "chat" ? "block" : "none";
+  const tab = p === "chat" ? "chats" : p;
+  document.querySelectorAll("#nav button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.p === tab);
+  });
+  if (p === "profile") {
+    $("pname").textContent = myName();
+    $("bigava").textContent = myName().charAt(0).toUpperCase();
+  }
+  if (p === "chat") load(true);
 }
 
 function showAuth() {
   clearInterval(timer);
   $("app").style.display = "none";
-  $("auth").style.display = "block";
+  $("auth").style.display = "flex";
 }
 
 function showApp() {
   $("auth").style.display = "none";
-  $("app").style.display = "block";
-  load();
+  $("app").style.display = "flex";
+  show("chats");
   clearInterval(timer);
-  timer = setInterval(load, 3000);
+  timer = setInterval(() => {
+    if (current === "chat") load(false);
+  }, 3000);
 }
 
-async function load() {
+async function load(force) {
   try {
     const r = await fetch("/api/messages", {
-      headers: { Authorization: "Bearer " + token() },
-    });
-    if (r.status === 401) return showAuth();
-    const d = await r.json();
-    const list = $("list");
-    const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 30;
-    list.innerHTML = "";
-    for (const m of d.messages) {
-      const row = document.createElement("div");
-      row.className = "m";
-      const name = document.createElement("b");
-      name.textContent = m.username + ": ";
-      row.appendChild(name);
-      row.appendChild(document.createTextNode(m.text));
-      list.appendChild(row);
-    }
-    if (atBottom) list.scrollTop = list.scrollHeight;
-  } catch (e) {}
-}
-
-async function send(path) {
-  $("msg").textContent = "Отправляю...";
-  try {
-    const r = await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: $("u").value, password: $("p").value }),
-    });
-    return await r.json();
-  } catch (e) {
-    return { error: "Ошибка связи с сервером" };
-  }
-}
-
-$("reg").onclick = async () => {
-  const d = await send("/api/register");
-  $("msg").textContent = d.ok ? "Готово, теперь нажми «Войти»" : d.error;
-};
-
-$("login").onclick = async () => {
-  const d = await send("/api/login");
-  if (d.ok) {
-    try { localStorage.setItem("mg_token", d.token); } catch (e) {}
-    $("msg").textContent = "";
-    showApp();
-  } else {
-    $("msg").textContent = d.error;
-  }
-};
-
-$("send").onclick = async () => {
-  const text = $("t").value.trim();
-  if (!text) return;
-  $("t").value = "";
-  await fetch("/api/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + token(),
-    },
-    body: JSON.stringify({ text }),
-  });
-  await load();
-  $("list").scrollTop = $("list").scrollHeight;
-};
-
-$("t").onkeydown = (e) => {
-  if (e.key === "Enter") $("send").onclick();
-};
-
-$("logout").onclick = () => {
-  try { localStorage.removeItem("mg_token"); } catch (e) {}
-  showAuth();
-};
-
-if (token()) showApp();
-
-// конец
