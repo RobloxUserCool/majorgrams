@@ -15,35 +15,23 @@
          box-sizing:border-box; }
   input { background:#1a222b; color:#fff; }
   button { background:#2b7fff; color:#fff; border:none; font-weight:600; }
+  button.second { background:#1a222b; border:1px solid #2f3b47; }
   #msg { margin-top:14px; min-height:24px; color:#8b98a5; }
 </style>
 </head>
 <body>
   <h1>MajorGram</h1>
-  <input id="u" placeholder="Ник" autocomplete="username">
-  <input id="p" type="password" placeholder="Пароль" autocomplete="new-password">
-  <button id="reg">Регистрация</button>
+  <div id="auth">
+    <input id="u" placeholder="Ник" autocomplete="username">
+    <input id="p" type="password" placeholder="Пароль">
+    <button id="login">Войти</button>
+    <button id="reg" class="second">Регистрация</button>
+  </div>
+  <div id="app" style="display:none">
+    <p id="hello"></p>
+    <button id="logout" class="second">Выйти</button>
+  </div>
   <div id="msg"></div>
 
 <script>
-  document.getElementById("reg").onclick = async () => {
-    const msg = document.getElementById("msg");
-    msg.textContent = "Отправляю...";
-    try {
-      const r = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: document.getElementById("u").value,
-          password: document.getElementById("p").value
-        })
-      });
-      const d = await r.json();
-      msg.textContent = d.ok ? "Готово, ты зарегистрирован" : d.error;
-    } catch (e) {
-      msg.textContent = "Ошибка связи с сервером";
-    }
-  };
-</script>
-</body>
-</html>
+  const $ = (id)
